@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graph Structure App</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        
+        .status {
+            background: #3498db;
+            color: white;
+            padding: 10px 20px;
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        .graph-container {
+            height: 600px;
+            border: 2px solid #ecf0f1;
+            margin: 20px;
+            border-radius: 4px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+        }
+        
+        .placeholder {
+            text-align: center;
+            color: #7f8c8d;
+        }
+        
+        .controls {
+            padding: 20px;
+            background: #ecf0f1;
+            border-top: 1px solid #bdc3c7;
+        }
+        
+        .btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 14px;
+        }
+        
+        .btn:hover {
+            background: #2980b9;
+        }
+        
+        .btn:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+        
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e8;
+            border-radius: 4px;
+            border-left: 4px solid #27ae60;
+        }
+        
+        .error {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fdeaea;
+            border-radius: 4px;
+            border-left: 4px solid #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Graph Structure App</h1>
+        </div>
+        
+        <div class="status" id="status">
+            初期化中...
+        </div>
+        
+        <div class="graph-container" id="graphContainer">
+            <div class="placeholder">
+                <h3>グラフ領域</h3>
+                <p>ここにCytoscape.jsのグラフが表示されます</p>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn" id="loadDataBtn" disabled>データを読み込み</button>
+            <button class="btn" id="saveDataBtn" disabled>状態を保存</button>
+            <button class="btn" id="resetBtn" disabled>リセット</button>
+            
+            <div class="info" id="infoBox">
+                <strong>アプリケーション情報:</strong><br>
+                • GitHub Pages: 正常に動作中<br>
+                • Gist ID: ee357324149fb59cef0cd81ecd26c4f6<br>
+                • 状態: 初期化待機中
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // アプリケーションの初期化
+        class GraphApp {
+            constructor() {
+                this.gistId = 'ee357324149fb59cef0cd81ecd26c4f6';
+                this.token = null; // 後で設定
+                this.statusElement = document.getElementById('status');
+                this.infoBox = document.getElementById('infoBox');
+                
+                this.init();
+            }
+            
+            init() {
+                this.updateStatus('アプリケーションを初期化しています...', 'info');
+                
+                // イベントリスナーの設定
+                document.getElementById('loadDataBtn').addEventListener('click', () => {
+                    this.loadData();
+                });
+                
+                document.getElementById('saveDataBtn').addEventListener('click', () => {
+                    this.saveData();
+                });
+                
+                document.getElementById('resetBtn').addEventListener('click', () => {
+                    this.resetApp();
+                });
+                
+                // 初期化完了
+                setTimeout(() => {
+                    this.updateStatus('初期化完了 - トークンの設定が必要です', 'warning');
+                    this.updateInfo();
+                }, 1000);
+            }
+            
+            updateStatus(message, type = 'info') {
+                this.statusElement.textContent = message;
+                this.statusElement.className = `status ${type}`;
+            }
+            
+            updateInfo() {
+                const now = new Date().toLocaleString('ja-JP');
+                this.infoBox.innerHTML = `
+                    <strong>アプリケーション情報:</strong><br>
+                    • GitHub Pages: ✅ 正常に動作中<br>
+                    • Gist ID: ${this.gistId}<br>
+                    • 最終更新: ${now}<br>
+                    • 状態: トークン設定待機中<br>
+                    <br>
+                    <strong>次のステップ:</strong><br>
+                    Personal Access Tokenの設定後、データの読み込みが可能になります。
+                `;
+            }
+            
+            loadData() {
+                this.updateStatus('データを読み込み中...', 'info');
+                // 実装予定: Gistからデータを取得
+                
+                setTimeout(() => {
+                    this.updateStatus('データ読み込み機能は次のステップで実装予定', 'warning');
+                }, 1000);
+            }
+            
+            saveData() {
+                this.updateStatus('データを保存中...', 'info');
+                // 実装予定: Gistにデータを保存
+                
+                setTimeout(() => {
+                    this.updateStatus('データ保存機能は次のステップで実装予定', 'warning');
+                }, 1000);
+            }
+            
+            resetApp() {
+                this.updateStatus('アプリケーションをリセットしています...', 'info');
+                
+                setTimeout(() => {
+                    this.updateStatus('リセット完了', 'success');
+                    this.updateInfo();
+                }, 500);
+            }
+        }
+        
+        // アプリケーションの開始
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('GitHub Pages App - 初期化開始');
+            window.app = new GraphApp();
+            console.log('GitHub Pages App - 初期化完了');
+        });
+    </script>
+</body>
+</html>
