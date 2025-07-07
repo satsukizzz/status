@@ -47,10 +47,13 @@
             margin: 20px;
             border-radius: 4px;
             position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             background: #fafafa;
+        }
+        
+        #cy {
+            width: 100%;
+            height: 100%;
+            border-radius: 4px;
         }
         
         .placeholder {
@@ -140,10 +143,11 @@
         </div>
         
         <div class="graph-container" id="graphContainer">
-            <div class="placeholder">
+            <div class="placeholder" id="placeholder">
                 <h3>グラフ領域</h3>
-                <p>ここにCytoscape.jsのグラフが表示されます</p>
+                <p>「データを読み込み」ボタンをクリックしてください</p>
             </div>
+            <div id="cy" style="display: none;"></div>
         </div>
         
         <div class="controls">
@@ -167,6 +171,9 @@
         </div>
     </div>
 
+    <!-- Cytoscape.js ライブラリ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+    
     <script>
         // アプリケーションの初期化
         class GraphApp {
@@ -177,9 +184,204 @@
                 this.infoBox = document.getElementById('infoBox');
                 this.graphData = null;
                 this.stateData = null;
+                this.cy = null; // Cytoscape インスタンス
                 
                 this.init();
             }
+            
+            getStateColor(state) {
+                const colors = {
+                    'active': '#28a745',      // 緑
+                    'inactive': '#6c757d',    // グレー
+                    'pending': '#ffc107',     // 黄色
+                    'completed': '#007bff',   // 青
+                    'error': '#dc3545'        // 赤
+                };
+                return colors[state] || '#6c757d';
+            }
+            
+            renderGraph() {
+                if (!this.graphData || !this.stateData) {
+                    return;
+                }
+                
+                // プレースホルダーを非表示にして、グラフを表示
+                document.getElementById('placeholder').style.display = 'none';
+                document.getElementById('cy').style.display = 'block';
+                
+                // 既存のグラフがあれば削除
+                if (this.cy) {
+                    this.cy.destroy();
+                }
+                
+                // Cytoscape用のデータを準備
+                const elements = [];
+                
+                // ノードを追加
+                this.graphData.nodes.forEach(node => {
+                    const currentState = this.stateData.recordStates[node.id] || node.state;
+                    elements.push({
+                        data: {
+                            id: node.id,
+                            label: node.label,
+                            state: currentState,
+                            heatmapType: node.heatmapType,
+                            frequency: node.frequency,
+                            achievement: node.achievement
+                        }
+                    });
+                });
+                
+                // エッジを追加
+                this.graphData.edges.forEach((edge, index) => {
+                    elements.push({
+                        data: {
+                            id: `edge-${index}`,
+                            source: edge.source,
+                            target: edge.target
+                        }
+                    });
+                });
+                
+                // Cytoscapeインスタンスを作成
+                this.cy = cytoscape({
+                    container: document.getElementById('cy'),
+                    elements: elements,
+                    style: [
+                        {
+                            selector: 'node',
+                            style: {
+                                'background-color': (ele) => this.getStateColor(ele.data('state')),
+                                'label': 'data(label)',
+                                'text-valign': 'center',
+                                'text-halign': 'center',
+                                'font-size': '12px',
+                                'font-weight': 'bold',
+                                'color': '#ffffff',
+                                'text-outline-width': 2,
+                                'text-outline-color': '#000000',
+                                'width': 60,
+                                'height': 60,
+                                'border-width': 2,
+                                'border-color': '#ffffff',
+                                'cursor': 'pointer'
+                            }
+                        },
+                        {
+                            selector: 'node:selected',
+                            style: {
+                                'border-width': 4,
+                                'border-color': '#ff6b6b'
+                            }
+                        },
+                        {
+                            selector: 'edge',
+                            style: {
+                                'width': 3,
+                                'line-color': '#666',
+                                'target-arrow-color': '#666',
+                                'target-arrow-shape': 'triangle',
+                                'curve-style': 'bezier'
+                            }
+                        }
+                    ],
+                    layout: {
+                        name: 'breadthfirst',
+                        directed: true,
+                        roots: this.findRootNodes(),
+                        padding: 30,
+                        spacingFactor: 1.5
+                    }
+                });
+                
+                // ノードクリックイベントを設定
+                this.cy.on('tap', 'node', (event) => {
+                    const node = event.target;
+                    this.handleNodeClick(node);
+                });
+                
+                // コンテキストメニューの設定（右クリックで状態変更）
+                this.cy.on('cxttap', 'node', (event) => {
+                    const node = event.target;
+                    this.showStateMenu(node, event);
+                });
+                
+                this.updateStatus('グラフの描画が完了しました', 'success');
+            }
+            
+            findRootNodes() {
+                if (!this.graphData || !this.graphData.edges) return [];
+                
+                const targets = new Set(this.graphData.edges.map(e => e.target));
+                const roots = this.graphData.nodes
+                    .filter(node => !targets.has(node.id))
+                    .map(node => node.id);
+                
+                return roots.length > 0 ? roots : [this.graphData.nodes[0].id];
+            }
+            
+            handleNodeClick(node) {
+                const nodeId = node.id();
+                const currentState = node.data('state');
+                
+                console.log(`ノード ${nodeId} がクリックされました (現在の状態: ${currentState})`);
+                
+                // 状態を循環的に変更
+                const states = ['active', 'inactive', 'pending', 'completed'];
+                const currentIndex = states.indexOf(currentState);
+                const nextState = states[(currentIndex + 1) % states.length];
+                
+                // 状態を更新
+                this.changeNodeState(nodeId, nextState);
+            }
+            
+            changeNodeState(nodeId, newState) {
+                if (!this.stateData) return;
+                
+                const oldState = this.stateData.recordStates[nodeId];
+                
+                // 状態データを更新
+                this.stateData.recordStates[nodeId] = newState;
+                
+                // イベントを記録
+                this.stateData.events.push({
+                    recordId: nodeId,
+                    oldState: oldState,
+                    newState: newState,
+                    timestamp: new Date().toISOString()
+                });
+                
+                // グラフの見た目を更新
+                const node = this.cy.getElementById(nodeId);
+                node.data('state', newState);
+                node.style('background-color', this.getStateColor(newState));
+                
+                this.updateStatus(`ノード ${nodeId} の状態を ${oldState} → ${newState} に変更しました`, 'info');
+                this.updateInfo();
+            }
+            
+            showStateMenu(node, event) {
+                event.preventDefault();
+                
+                const nodeId = node.id();
+                const states = ['active', 'inactive', 'pending', 'completed'];
+                const currentState = node.data('state');
+                
+                const menu = states.map(state => {
+                    const isActive = state === currentState ? ' (現在)' : '';
+                    return `${state}${isActive}`;
+                }).join('\n');
+                
+                const choice = prompt(`${nodeId} の状態を選択してください:\n\n${menu}\n\n入力: active, inactive, pending, completed`);
+                
+                if (choice && states.includes(choice)) {
+                    this.changeNodeState(nodeId, choice);
+                }
+            }
+            
+            displayGraphData() {
+                // この関数は renderGraph() に置き換えられました
+                this.renderGraph();
             
             init() {
                 this.updateStatus('アプリケーションを初期化しています...', 'info');
@@ -289,7 +491,7 @@
                     
                     this.updateStatus('データの読み込みが完了しました', 'success');
                     this.updateInfo();
-                    this.displayGraphData();
+                    this.renderGraph();
                     
                 } catch (error) {
                     console.error('データ読み込みエラー:', error);
@@ -331,6 +533,7 @@
                     
                     this.updateStatus('データの保存が完了しました', 'success');
                     this.updateInfo();
+                    this.renderGraph(); // グラフを再描画
                     
                 } catch (error) {
                     console.error('データ保存エラー:', error);
@@ -395,18 +598,27 @@
                 this.graphData = null;
                 this.stateData = null;
                 
+                // グラフを破棄
+                if (this.cy) {
+                    this.cy.destroy();
+                    this.cy = null;
+                }
+                
                 // UI をリセット
                 document.getElementById('tokenSetup').style.display = 'block';
                 document.getElementById('loadDataBtn').disabled = true;
                 document.getElementById('saveDataBtn').disabled = true;
                 document.getElementById('resetBtn').disabled = true;
+                document.getElementById('placeholder').style.display = 'block';
+                document.getElementById('cy').style.display = 'none';
                 
                 const container = document.getElementById('graphContainer');
                 container.innerHTML = `
-                    <div class="placeholder">
+                    <div class="placeholder" id="placeholder">
                         <h3>グラフ領域</h3>
-                        <p>ここにCytoscape.jsのグラフが表示されます</p>
+                        <p>「データを読み込み」ボタンをクリックしてください</p>
                     </div>
+                    <div id="cy" style="display: none;"></div>
                 `;
                 
                 setTimeout(() => {
