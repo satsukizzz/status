@@ -842,4 +842,120 @@
                         },
                         body: JSON.stringify({
                             files: {
-                                'app-
+                                'app-state.json': {
+                                    content: JSON.stringify(this.stateData, null, 2)
+                                }
+                            }
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    this.updateStatus('データの保存が完了しました', 'success');
+                    this.updateInfo();
+                    this.renderGraph(); // グラフを再描画
+                    
+                } catch (error) {
+                    console.error('データ保存エラー:', error);
+                    this.updateStatus(`データ保存エラー: ${error.message}`, 'error');
+                }
+            }
+            
+            displayGraphData() {
+                const container = document.getElementById('graphContainer');
+                
+                if (!this.graphData || !this.stateData) {
+                    container.innerHTML = '<div class="placeholder"><h3>データが読み込まれていません</h3></div>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <div style="padding: 20px; text-align: left; width: 100%;">
+                        <h3>📊 読み込まれたデータ</h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 10px 0;">
+                            <strong>ノード数:</strong> ${this.graphData.nodes.length}<br>
+                            <strong>エッジ数:</strong> ${this.graphData.edges.length}<br>
+                            <strong>状態記録数:</strong> ${Object.keys(this.stateData.recordStates).length}<br>
+                            <strong>イベント数:</strong> ${this.stateData.events.length}
+                        </div>
+                        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
+                            <strong>ノード一覧:</strong><br>
+                            ${this.graphData.nodes.map(node => 
+                                `• ${node.label} (${node.id}) - 状態: ${this.stateData.recordStates[node.id] || node.state}`
+                            ).join('<br>')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            updateStatus(message, type = 'info') {
+                this.statusElement.textContent = message;
+                this.statusElement.className = `status ${type}`;
+            }
+            
+            updateInfo() {
+                const now = new Date().toLocaleString('ja-JP');
+                const tokenStatus = this.token ? '✅ 設定済み' : '❌ 未設定';
+                const dataStatus = this.graphData ? '✅ 読み込み済み' : '❌ 未読み込み';
+                
+                this.infoBox.innerHTML = `
+                    <strong>アプリケーション情報:</strong><br>
+                    • GitHub Pages: ✅ 正常に動作中<br>
+                    • Gist ID: ${this.gistId}<br>
+                    • トークン: ${tokenStatus}<br>
+                    • データ: ${dataStatus}<br>
+                    • 最終更新: ${now}<br>
+                    ${this.stateData ? `• 前回保存: ${new Date(this.stateData.lastUpdated).toLocaleString('ja-JP')}` : ''}
+                `;
+            }
+            
+            resetApp() {
+                this.updateStatus('アプリケーションをリセットしています...', 'info');
+                
+                // トークンを削除
+                localStorage.removeItem('github-token');
+                this.token = null;
+                this.graphData = null;
+                this.stateData = null;
+                
+                // グラフを破棄
+                if (this.cy) {
+                    this.cy.destroy();
+                    this.cy = null;
+                }
+                
+                // UI をリセット
+                document.getElementById('tokenSetup').style.display = 'block';
+                document.getElementById('loadDataBtn').disabled = true;
+                document.getElementById('saveDataBtn').disabled = true;
+                document.getElementById('resetBtn').disabled = true;
+                document.getElementById('placeholder').style.display = 'block';
+                document.getElementById('cy').style.display = 'none';
+                
+                const container = document.getElementById('graphContainer');
+                container.innerHTML = `
+                    <div class="placeholder" id="placeholder">
+                        <h3>グラフ領域</h3>
+                        <p>「データを読み込み」ボタンをクリックしてください</p>
+                    </div>
+                    <div id="cy" style="display: none;"></div>
+                `;
+                
+                setTimeout(() => {
+                    this.updateStatus('リセット完了 - トークンを再設定してください', 'warning');
+                    this.updateInfo();
+                }, 500);
+            }
+        }
+        
+        // アプリケーションの開始
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('GitHub Pages App - 初期化開始');
+            window.app = new GraphApp();
+            console.log('GitHub Pages App - 初期化完了');
+        });
+    </script>
+</body>
+</html>
