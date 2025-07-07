@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Graph Structure App</title>
+    <title>Enhanced Graph Structure App</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -13,7 +13,7 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
             background: white;
             border-radius: 8px;
@@ -41,13 +41,27 @@
             font-size: 14px;
         }
         
+        .main-content {
+            display: flex;
+            min-height: 600px;
+        }
+        
         .graph-container {
+            flex: 1;
             height: 600px;
             border: 2px solid #ecf0f1;
             margin: 20px;
             border-radius: 4px;
             position: relative;
             background: #fafafa;
+        }
+        
+        .sidebar {
+            width: 350px;
+            background: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+            padding: 20px;
+            overflow-y: auto;
         }
         
         #cy {
@@ -59,6 +73,7 @@
         .placeholder {
             text-align: center;
             color: #7f8c8d;
+            padding: 200px 20px;
         }
         
         .controls {
@@ -85,6 +100,41 @@
             margin: 10px 0;
         }
         
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .node-form {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .node-details {
+            background: #f0f8ff;
+            border: 1px solid #b6d7ff;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
         .success {
             background: #d4edda !important;
             border-left-color: #28a745 !important;
@@ -95,6 +145,11 @@
             border-left-color: #ffc107 !important;
         }
         
+        .error {
+            background: #f8d7da !important;
+            border-left-color: #dc3545 !important;
+        }
+        
         .btn {
             background: #3498db;
             color: white;
@@ -102,7 +157,7 @@
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
-            margin-right: 10px;
+            margin: 5px 5px 5px 0;
             font-size: 14px;
         }
         
@@ -115,6 +170,22 @@
             cursor: not-allowed;
         }
         
+        .btn-success {
+            background: #28a745;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
         .info {
             margin-top: 20px;
             padding: 15px;
@@ -123,31 +194,126 @@
             border-left: 4px solid #27ae60;
         }
         
-        .error {
-            margin-top: 20px;
-            padding: 15px;
-            background: #fdeaea;
+        .section-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .node-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
             border-radius: 4px;
-            border-left: 4px solid #e74c3c;
+            padding: 10px;
+            background: white;
+        }
+        
+        .node-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+            border-left: 4px solid #6c757d;
+            background: #f8f9fa;
+            cursor: pointer;
+        }
+        
+        .node-item:hover {
+            background: #e9ecef;
+        }
+        
+        .node-item.active {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .node-item.inactive {
+            border-left-color: #6c757d;
+            background: #e9ecef;
+        }
+        
+        .node-item.pending {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        .node-item.completed {
+            border-left-color: #007bff;
+            background: #cce7ff;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Graph Structure App</h1>
+            <h1>Enhanced Graph Structure App</h1>
         </div>
         
         <div class="status" id="status">
             初期化中...
         </div>
         
-        <div class="graph-container" id="graphContainer">
-            <div class="placeholder" id="placeholder">
-                <h3>グラフ領域</h3>
-                <p>「データを読み込み」ボタンをクリックしてください</p>
+        <div class="main-content">
+            <div class="graph-container" id="graphContainer">
+                <div class="placeholder" id="placeholder">
+                    <h3>グラフ領域</h3>
+                    <p>「データを読み込み」ボタンをクリックしてください</p>
+                </div>
+                <div id="cy" style="display: none;"></div>
             </div>
-            <div id="cy" style="display: none;"></div>
+            
+            <div class="sidebar">
+                <div class="section-title">📊 ノード管理</div>
+                
+                <div class="node-form">
+                    <h4>新しいノードを追加</h4>
+                    <div class="form-group">
+                        <label>ラベル</label>
+                        <input type="text" id="nodeLabel" placeholder="ノード名">
+                    </div>
+                    <div class="form-group">
+                        <label>親ノード</label>
+                        <select id="parentNode">
+                            <option value="">なし（ルートノード）</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>ヒートマップの種類</label>
+                        <select id="heatmapType">
+                            <option value="performance">performance</option>
+                            <option value="completion">completion</option>
+                            <option value="frequency">frequency</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>繰り返し頻度</label>
+                        <select id="frequency">
+                            <option value="">なし</option>
+                            <option value="daily">毎日</option>
+                            <option value="weekly">毎週</option>
+                            <option value="monthly">毎月</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>達成度 (0-1)</label>
+                        <input type="number" id="achievement" min="0" max="1" step="0.1" placeholder="0.0">
+                    </div>
+                    <button class="btn btn-success" id="addNodeBtn" disabled>ノードを追加</button>
+                </div>
+                
+                <div class="node-details" id="nodeDetails">
+                    <h4>選択中のノード</h4>
+                    <p>ノードを選択してください</p>
+                </div>
+                
+                <div class="section-title">📋 ノード一覧</div>
+                <div class="node-list" id="nodeList">
+                    データを読み込んでください
+                </div>
+            </div>
         </div>
         
         <div class="controls">
@@ -159,8 +325,8 @@
             </div>
             
             <button class="btn" id="loadDataBtn" disabled>データを読み込み</button>
-            <button class="btn" id="saveDataBtn" disabled>状態を保存</button>
-            <button class="btn" id="resetBtn" disabled>リセット</button>
+            <button class="btn btn-success" id="saveDataBtn" disabled>状態を保存</button>
+            <button class="btn btn-danger" id="resetBtn" disabled>リセット</button>
             
             <div class="info" id="infoBox">
                 <strong>アプリケーション情報:</strong><br>
@@ -171,12 +337,10 @@
         </div>
     </div>
 
-    <!-- Cytoscape.js ライブラリ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
     
     <script>
-        // アプリケーションの初期化
-        class GraphApp {
+        class EnhancedGraphApp {
             constructor() {
                 this.gistId = 'ee357324149fb59cef0cd81ecd26c4f6';
                 this.token = null;
@@ -184,20 +348,27 @@
                 this.infoBox = document.getElementById('infoBox');
                 this.graphData = null;
                 this.stateData = null;
-                this.cy = null; // Cytoscape インスタンス
+                this.cy = null;
+                this.selectedNode = null;
+                this.nodeCounter = 0;
                 
                 this.init();
             }
             
             getStateColor(state) {
                 const colors = {
-                    'active': '#28a745',      // 緑
-                    'inactive': '#6c757d',    // グレー
-                    'pending': '#ffc107',     // 黄色
-                    'completed': '#007bff',   // 青
-                    'error': '#dc3545'        // 赤
+                    'active': '#28a745',
+                    'inactive': '#6c757d',
+                    'pending': '#ffc107',
+                    'completed': '#007bff',
+                    'error': '#dc3545'
                 };
                 return colors[state] || '#6c757d';
+            }
+            
+            generateNodeId() {
+                this.nodeCounter++;
+                return `node_${Date.now()}_${this.nodeCounter}`;
             }
             
             renderGraph() {
@@ -205,16 +376,13 @@
                     return;
                 }
                 
-                // プレースホルダーを非表示にして、グラフを表示
                 document.getElementById('placeholder').style.display = 'none';
                 document.getElementById('cy').style.display = 'block';
                 
-                // 既存のグラフがあれば削除
                 if (this.cy) {
                     this.cy.destroy();
                 }
                 
-                // Cytoscape用のデータを準備
                 const elements = [];
                 
                 // ノードを追加
@@ -243,7 +411,6 @@
                     });
                 });
                 
-                // Cytoscapeインスタンスを作成
                 this.cy = cytoscape({
                     container: document.getElementById('cy'),
                     elements: elements,
@@ -260,11 +427,13 @@
                                 'color': '#ffffff',
                                 'text-outline-width': 2,
                                 'text-outline-color': '#000000',
-                                'width': 60,
-                                'height': 60,
+                                'width': 80,
+                                'height': 80,
                                 'border-width': 2,
                                 'border-color': '#ffffff',
-                                'cursor': 'pointer'
+                                'cursor': 'pointer',
+                                'text-wrap': 'wrap',
+                                'text-max-width': '60px'
                             }
                         },
                         {
@@ -290,23 +459,193 @@
                         directed: true,
                         roots: this.findRootNodes(),
                         padding: 30,
-                        spacingFactor: 1.5
+                        spacingFactor: 1.8,
+                        avoidOverlap: true
                     }
                 });
                 
-                // ノードクリックイベントを設定
+                // イベントリスナーを設定
                 this.cy.on('tap', 'node', (event) => {
                     const node = event.target;
-                    this.handleNodeClick(node);
+                    this.selectNode(node);
                 });
                 
-                // コンテキストメニューの設定（右クリックで状態変更）
                 this.cy.on('cxttap', 'node', (event) => {
                     const node = event.target;
                     this.showStateMenu(node, event);
                 });
                 
                 this.updateStatus('グラフの描画が完了しました', 'success');
+                this.updateNodeList();
+                this.updateParentNodeSelect();
+            }
+            
+            selectNode(node) {
+                if (this.selectedNode) {
+                    this.selectedNode.unselect();
+                }
+                
+                this.selectedNode = node;
+                node.select();
+                
+                this.updateNodeDetails(node);
+                this.highlightNodeInList(node.id());
+            }
+            
+            updateNodeDetails(node) {
+                const nodeData = this.graphData.nodes.find(n => n.id === node.id());
+                const currentState = this.stateData.recordStates[node.id()];
+                
+                document.getElementById('nodeDetails').innerHTML = `
+                    <h4>選択中のノード</h4>
+                    <p><strong>ID:</strong> ${node.id()}</p>
+                    <p><strong>ラベル:</strong> ${nodeData.label}</p>
+                    <p><strong>状態:</strong> <span style="color: ${this.getStateColor(currentState)}">${currentState}</span></p>
+                    <p><strong>ヒートマップ:</strong> ${nodeData.heatmapType}</p>
+                    <p><strong>頻度:</strong> ${nodeData.frequency || 'なし'}</p>
+                    <p><strong>達成度:</strong> ${nodeData.achievement || 'なし'}</p>
+                    <button class="btn btn-danger" onclick="app.deleteNode('${node.id()}')">このノードを削除</button>
+                `;
+            }
+            
+            highlightNodeInList(nodeId) {
+                const nodeItems = document.querySelectorAll('.node-item');
+                nodeItems.forEach(item => {
+                    item.classList.remove('selected');
+                    if (item.dataset.nodeId === nodeId) {
+                        item.style.background = '#fff3cd';
+                        item.style.borderLeftColor = '#ff6b6b';
+                    }
+                });
+            }
+            
+            updateNodeList() {
+                if (!this.graphData || !this.stateData) return;
+                
+                const nodeList = document.getElementById('nodeList');
+                nodeList.innerHTML = '';
+                
+                this.graphData.nodes.forEach(node => {
+                    const currentState = this.stateData.recordStates[node.id] || node.state;
+                    const nodeItem = document.createElement('div');
+                    nodeItem.className = `node-item ${currentState}`;
+                    nodeItem.dataset.nodeId = node.id;
+                    nodeItem.innerHTML = `
+                        <div style="font-weight: bold;">${node.label}</div>
+                        <div style="font-size: 12px; color: #666;">${node.id}</div>
+                        <div style="font-size: 12px;">状態: ${currentState}</div>
+                    `;
+                    nodeItem.addEventListener('click', () => {
+                        const cyNode = this.cy.getElementById(node.id);
+                        this.selectNode(cyNode);
+                    });
+                    nodeList.appendChild(nodeItem);
+                });
+            }
+            
+            updateParentNodeSelect() {
+                const parentSelect = document.getElementById('parentNode');
+                parentSelect.innerHTML = '<option value="">なし（ルートノード）</option>';
+                
+                if (this.graphData) {
+                    this.graphData.nodes.forEach(node => {
+                        const option = document.createElement('option');
+                        option.value = node.id;
+                        option.textContent = node.label;
+                        parentSelect.appendChild(option);
+                    });
+                }
+            }
+            
+            addNode() {
+                const label = document.getElementById('nodeLabel').value.trim();
+                const parentId = document.getElementById('parentNode').value;
+                const heatmapType = document.getElementById('heatmapType').value;
+                const frequency = document.getElementById('frequency').value || null;
+                const achievement = parseFloat(document.getElementById('achievement').value) || null;
+                
+                if (!label) {
+                    alert('ラベルを入力してください');
+                    return;
+                }
+                
+                const newNodeId = this.generateNodeId();
+                
+                // 新しいノードを作成
+                const newNode = {
+                    id: newNodeId,
+                    label: label,
+                    heatmapType: heatmapType,
+                    state: 'pending',
+                    frequency: frequency,
+                    achievement: achievement
+                };
+                
+                // グラフデータに追加
+                this.graphData.nodes.push(newNode);
+                
+                // 親ノードが指定されている場合、エッジを追加
+                if (parentId) {
+                    this.graphData.edges.push({
+                        source: parentId,
+                        target: newNodeId
+                    });
+                }
+                
+                // 状態データに追加
+                this.stateData.recordStates[newNodeId] = 'pending';
+                
+                // イベントを記録
+                this.stateData.events.push({
+                    recordId: newNodeId,
+                    newState: 'pending',
+                    timestamp: new Date().toISOString(),
+                    action: 'node_created'
+                });
+                
+                // フォームをリセット
+                document.getElementById('nodeLabel').value = '';
+                document.getElementById('parentNode').value = '';
+                document.getElementById('achievement').value = '';
+                
+                // グラフを再描画
+                this.renderGraph();
+                this.updateStatus(`新しいノード "${label}" を追加しました`, 'success');
+            }
+            
+            deleteNode(nodeId) {
+                if (!confirm('このノードを削除しますか？関連するエッジも削除されます。')) {
+                    return;
+                }
+                
+                // ノードを削除
+                this.graphData.nodes = this.graphData.nodes.filter(n => n.id !== nodeId);
+                
+                // 関連するエッジを削除
+                this.graphData.edges = this.graphData.edges.filter(e => 
+                    e.source !== nodeId && e.target !== nodeId
+                );
+                
+                // 状態データから削除
+                delete this.stateData.recordStates[nodeId];
+                
+                // イベントを記録
+                this.stateData.events.push({
+                    recordId: nodeId,
+                    timestamp: new Date().toISOString(),
+                    action: 'node_deleted'
+                });
+                
+                // 選択解除
+                this.selectedNode = null;
+                document.getElementById('nodeDetails').innerHTML = `
+                    <h4>選択中のノード</h4>
+                    <p>ノードを選択してください</p>
+                `;
+                
+                // グラフを再描画
+                this.renderGraph();
+                this.updateStatus(`ノード "${nodeId}" を削除しました`, 'success');
             }
             
             findRootNodes() {
@@ -318,46 +657,6 @@
                     .map(node => node.id);
                 
                 return roots.length > 0 ? roots : [this.graphData.nodes[0].id];
-            }
-            
-            handleNodeClick(node) {
-                const nodeId = node.id();
-                const currentState = node.data('state');
-                
-                console.log(`ノード ${nodeId} がクリックされました (現在の状態: ${currentState})`);
-                
-                // 状態を循環的に変更
-                const states = ['active', 'inactive', 'pending', 'completed'];
-                const currentIndex = states.indexOf(currentState);
-                const nextState = states[(currentIndex + 1) % states.length];
-                
-                // 状態を更新
-                this.changeNodeState(nodeId, nextState);
-            }
-            
-            changeNodeState(nodeId, newState) {
-                if (!this.stateData) return;
-                
-                const oldState = this.stateData.recordStates[nodeId];
-                
-                // 状態データを更新
-                this.stateData.recordStates[nodeId] = newState;
-                
-                // イベントを記録
-                this.stateData.events.push({
-                    recordId: nodeId,
-                    oldState: oldState,
-                    newState: newState,
-                    timestamp: new Date().toISOString()
-                });
-                
-                // グラフの見た目を更新
-                const node = this.cy.getElementById(nodeId);
-                node.data('state', newState);
-                node.style('background-color', this.getStateColor(newState));
-                
-                this.updateStatus(`ノード ${nodeId} の状態を ${oldState} → ${newState} に変更しました`, 'info');
-                this.updateInfo();
             }
             
             showStateMenu(node, event) {
@@ -379,15 +678,35 @@
                 }
             }
             
-            displayGraphData() {
-                // この関数は renderGraph() に置き換えられました
-                this.renderGraph();
+            changeNodeState(nodeId, newState) {
+                if (!this.stateData) return;
+                
+                const oldState = this.stateData.recordStates[nodeId];
+                
+                this.stateData.recordStates[nodeId] = newState;
+                
+                this.stateData.events.push({
+                    recordId: nodeId,
+                    oldState: oldState,
+                    newState: newState,
+                    timestamp: new Date().toISOString()
+                });
+                
+                const node = this.cy.getElementById(nodeId);
+                node.data('state', newState);
+                node.style('background-color', this.getStateColor(newState));
+                
+                this.updateStatus(`ノード ${nodeId} の状態を ${oldState} → ${newState} に変更しました`, 'success');
+                this.updateNodeList();
+                
+                if (this.selectedNode && this.selectedNode.id() === nodeId) {
+                    this.updateNodeDetails(this.selectedNode);
+                }
             }
             
             init() {
                 this.updateStatus('アプリケーションを初期化しています...', 'info');
                 
-                // 保存されたトークンを確認
                 const savedToken = localStorage.getItem('github-token');
                 if (savedToken) {
                     this.token = savedToken;
@@ -412,7 +731,10 @@
                     this.resetApp();
                 });
                 
-                // 初期化完了
+                document.getElementById('addNodeBtn').addEventListener('click', () => {
+                    this.addNode();
+                });
+                
                 setTimeout(() => {
                     if (this.token) {
                         this.updateStatus('初期化完了 - データの読み込みが可能です', 'success');
@@ -455,6 +777,7 @@
                 document.getElementById('loadDataBtn').disabled = false;
                 document.getElementById('saveDataBtn').disabled = false;
                 document.getElementById('resetBtn').disabled = false;
+                document.getElementById('addNodeBtn').disabled = false;
             }
             
             async loadData() {
@@ -479,7 +802,6 @@
                     
                     const gist = await response.json();
                     
-                    // ファイルの内容を解析
                     const graphStructureFile = gist.files['graph-structure.json'];
                     const appStateFile = gist.files['app-state.json'];
                     
@@ -501,7 +823,7 @@
             }
             
             async saveData() {
-                if (!this.token || !this.stateData) {
+                if (!this.token || !this.stateData || !this.graphData) {
                     alert('先にデータを読み込んでください');
                     return;
                 }
@@ -509,7 +831,6 @@
                 this.updateStatus('Gistにデータを保存中...', 'info');
                 
                 try {
-                    // 現在時刻を追加
                     this.stateData.lastUpdated = new Date().toISOString();
                     
                     const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
@@ -521,120 +842,4 @@
                         },
                         body: JSON.stringify({
                             files: {
-                                'app-state.json': {
-                                    content: JSON.stringify(this.stateData, null, 2)
-                                }
-                            }
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    
-                    this.updateStatus('データの保存が完了しました', 'success');
-                    this.updateInfo();
-                    this.renderGraph(); // グラフを再描画
-                    
-                } catch (error) {
-                    console.error('データ保存エラー:', error);
-                    this.updateStatus(`データ保存エラー: ${error.message}`, 'error');
-                }
-            }
-            
-            displayGraphData() {
-                const container = document.getElementById('graphContainer');
-                
-                if (!this.graphData || !this.stateData) {
-                    container.innerHTML = '<div class="placeholder"><h3>データが読み込まれていません</h3></div>';
-                    return;
-                }
-                
-                container.innerHTML = `
-                    <div style="padding: 20px; text-align: left; width: 100%;">
-                        <h3>📊 読み込まれたデータ</h3>
-                        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 10px 0;">
-                            <strong>ノード数:</strong> ${this.graphData.nodes.length}<br>
-                            <strong>エッジ数:</strong> ${this.graphData.edges.length}<br>
-                            <strong>状態記録数:</strong> ${Object.keys(this.stateData.recordStates).length}<br>
-                            <strong>イベント数:</strong> ${this.stateData.events.length}
-                        </div>
-                        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
-                            <strong>ノード一覧:</strong><br>
-                            ${this.graphData.nodes.map(node => 
-                                `• ${node.label} (${node.id}) - 状態: ${this.stateData.recordStates[node.id] || node.state}`
-                            ).join('<br>')}
-                        </div>
-                    </div>
-                `;
-            }
-            
-            updateStatus(message, type = 'info') {
-                this.statusElement.textContent = message;
-                this.statusElement.className = `status ${type}`;
-            }
-            
-            updateInfo() {
-                const now = new Date().toLocaleString('ja-JP');
-                const tokenStatus = this.token ? '✅ 設定済み' : '❌ 未設定';
-                const dataStatus = this.graphData ? '✅ 読み込み済み' : '❌ 未読み込み';
-                
-                this.infoBox.innerHTML = `
-                    <strong>アプリケーション情報:</strong><br>
-                    • GitHub Pages: ✅ 正常に動作中<br>
-                    • Gist ID: ${this.gistId}<br>
-                    • トークン: ${tokenStatus}<br>
-                    • データ: ${dataStatus}<br>
-                    • 最終更新: ${now}<br>
-                    ${this.stateData ? `• 前回保存: ${new Date(this.stateData.lastUpdated).toLocaleString('ja-JP')}` : ''}
-                `;
-            }
-            
-            resetApp() {
-                this.updateStatus('アプリケーションをリセットしています...', 'info');
-                
-                // トークンを削除
-                localStorage.removeItem('github-token');
-                this.token = null;
-                this.graphData = null;
-                this.stateData = null;
-                
-                // グラフを破棄
-                if (this.cy) {
-                    this.cy.destroy();
-                    this.cy = null;
-                }
-                
-                // UI をリセット
-                document.getElementById('tokenSetup').style.display = 'block';
-                document.getElementById('loadDataBtn').disabled = true;
-                document.getElementById('saveDataBtn').disabled = true;
-                document.getElementById('resetBtn').disabled = true;
-                document.getElementById('placeholder').style.display = 'block';
-                document.getElementById('cy').style.display = 'none';
-                
-                const container = document.getElementById('graphContainer');
-                container.innerHTML = `
-                    <div class="placeholder" id="placeholder">
-                        <h3>グラフ領域</h3>
-                        <p>「データを読み込み」ボタンをクリックしてください</p>
-                    </div>
-                    <div id="cy" style="display: none;"></div>
-                `;
-                
-                setTimeout(() => {
-                    this.updateStatus('リセット完了 - トークンを再設定してください', 'warning');
-                    this.updateInfo();
-                }, 500);
-            }
-        }
-        
-        // アプリケーションの開始
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log('GitHub Pages App - 初期化開始');
-            window.app = new GraphApp();
-            console.log('GitHub Pages App - 初期化完了');
-        });
-    </script>
-</body>
-</html>
+                                'app-
