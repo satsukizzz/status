@@ -64,6 +64,34 @@
             border-top: 1px solid #bdc3c7;
         }
         
+        .token-setup {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+        }
+        
+        .token-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            background: #d4edda !important;
+            border-left-color: #28a745 !important;
+        }
+        
+        .warning {
+            background: #fff3cd !important;
+            border-left-color: #ffc107 !important;
+        }
+        
         .btn {
             background: #3498db;
             color: white;
@@ -119,6 +147,13 @@
         </div>
         
         <div class="controls">
+            <div class="token-setup" id="tokenSetup">
+                <strong>🔑 Personal Access Token の設定</strong><br>
+                <small>GitHub API を使用するために必要です（ブラウザにのみ保存されます）</small>
+                <input type="password" class="token-input" id="tokenInput" placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                <button class="btn" id="setTokenBtn">トークンを設定</button>
+            </div>
+            
             <button class="btn" id="loadDataBtn" disabled>データを読み込み</button>
             <button class="btn" id="saveDataBtn" disabled>状態を保存</button>
             <button class="btn" id="resetBtn" disabled>リセット</button>
@@ -137,9 +172,11 @@
         class GraphApp {
             constructor() {
                 this.gistId = 'ee357324149fb59cef0cd81ecd26c4f6';
-                this.token = null; // 後で設定
+                this.token = null;
                 this.statusElement = document.getElementById('status');
                 this.infoBox = document.getElementById('infoBox');
+                this.graphData = null;
+                this.stateData = null;
                 
                 this.init();
             }
@@ -147,7 +184,19 @@
             init() {
                 this.updateStatus('アプリケーションを初期化しています...', 'info');
                 
+                // 保存されたトークンを確認
+                const savedToken = localStorage.getItem('github-token');
+                if (savedToken) {
+                    this.token = savedToken;
+                    this.hideTokenSetup();
+                    this.enableButtons();
+                }
+                
                 // イベントリスナーの設定
+                document.getElementById('setTokenBtn').addEventListener('click', () => {
+                    this.setToken();
+                });
+                
                 document.getElementById('loadDataBtn').addEventListener('click', () => {
                     this.loadData();
                 });
@@ -162,9 +211,158 @@
                 
                 // 初期化完了
                 setTimeout(() => {
-                    this.updateStatus('初期化完了 - トークンの設定が必要です', 'warning');
+                    if (this.token) {
+                        this.updateStatus('初期化完了 - データの読み込みが可能です', 'success');
+                    } else {
+                        this.updateStatus('初期化完了 - トークンの設定が必要です', 'warning');
+                    }
                     this.updateInfo();
                 }, 1000);
+            }
+            
+            setToken() {
+                const tokenInput = document.getElementById('tokenInput');
+                const token = tokenInput.value.trim();
+                
+                if (!token) {
+                    alert('トークンを入力してください');
+                    return;
+                }
+                
+                if (!token.startsWith('ghp_')) {
+                    alert('有効なGitHub Personal Access Tokenを入力してください（ghp_で始まる）');
+                    return;
+                }
+                
+                this.token = token;
+                localStorage.setItem('github-token', token);
+                tokenInput.value = '';
+                
+                this.hideTokenSetup();
+                this.enableButtons();
+                this.updateStatus('トークンが設定されました - データの読み込みが可能です', 'success');
+                this.updateInfo();
+            }
+            
+            hideTokenSetup() {
+                document.getElementById('tokenSetup').style.display = 'none';
+            }
+            
+            enableButtons() {
+                document.getElementById('loadDataBtn').disabled = false;
+                document.getElementById('saveDataBtn').disabled = false;
+                document.getElementById('resetBtn').disabled = false;
+            }
+            
+            async loadData() {
+                if (!this.token) {
+                    alert('先にトークンを設定してください');
+                    return;
+                }
+                
+                this.updateStatus('Gistからデータを読み込み中...', 'info');
+                
+                try {
+                    const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
+                        headers: {
+                            'Authorization': `token ${this.token}`,
+                            'Accept': 'application/vnd.github.v3+json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const gist = await response.json();
+                    
+                    // ファイルの内容を解析
+                    const graphStructureFile = gist.files['graph-structure.json'];
+                    const appStateFile = gist.files['app-state.json'];
+                    
+                    if (!graphStructureFile || !appStateFile) {
+                        throw new Error('必要なファイルが見つかりません');
+                    }
+                    
+                    this.graphData = JSON.parse(graphStructureFile.content);
+                    this.stateData = JSON.parse(appStateFile.content);
+                    
+                    this.updateStatus('データの読み込みが完了しました', 'success');
+                    this.updateInfo();
+                    this.displayGraphData();
+                    
+                } catch (error) {
+                    console.error('データ読み込みエラー:', error);
+                    this.updateStatus(`データ読み込みエラー: ${error.message}`, 'error');
+                }
+            }
+            
+            async saveData() {
+                if (!this.token || !this.stateData) {
+                    alert('先にデータを読み込んでください');
+                    return;
+                }
+                
+                this.updateStatus('Gistにデータを保存中...', 'info');
+                
+                try {
+                    // 現在時刻を追加
+                    this.stateData.lastUpdated = new Date().toISOString();
+                    
+                    const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Authorization': `token ${this.token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            files: {
+                                'app-state.json': {
+                                    content: JSON.stringify(this.stateData, null, 2)
+                                }
+                            }
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    this.updateStatus('データの保存が完了しました', 'success');
+                    this.updateInfo();
+                    
+                } catch (error) {
+                    console.error('データ保存エラー:', error);
+                    this.updateStatus(`データ保存エラー: ${error.message}`, 'error');
+                }
+            }
+            
+            displayGraphData() {
+                const container = document.getElementById('graphContainer');
+                
+                if (!this.graphData || !this.stateData) {
+                    container.innerHTML = '<div class="placeholder"><h3>データが読み込まれていません</h3></div>';
+                    return;
+                }
+                
+                container.innerHTML = `
+                    <div style="padding: 20px; text-align: left; width: 100%;">
+                        <h3>📊 読み込まれたデータ</h3>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 10px 0;">
+                            <strong>ノード数:</strong> ${this.graphData.nodes.length}<br>
+                            <strong>エッジ数:</strong> ${this.graphData.edges.length}<br>
+                            <strong>状態記録数:</strong> ${Object.keys(this.stateData.recordStates).length}<br>
+                            <strong>イベント数:</strong> ${this.stateData.events.length}
+                        </div>
+                        <div style="background: #e9ecef; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
+                            <strong>ノード一覧:</strong><br>
+                            ${this.graphData.nodes.map(node => 
+                                `• ${node.label} (${node.id}) - 状態: ${this.stateData.recordStates[node.id] || node.state}`
+                            ).join('<br>')}
+                        </div>
+                    </div>
+                `;
             }
             
             updateStatus(message, type = 'info') {
@@ -174,41 +372,45 @@
             
             updateInfo() {
                 const now = new Date().toLocaleString('ja-JP');
+                const tokenStatus = this.token ? '✅ 設定済み' : '❌ 未設定';
+                const dataStatus = this.graphData ? '✅ 読み込み済み' : '❌ 未読み込み';
+                
                 this.infoBox.innerHTML = `
                     <strong>アプリケーション情報:</strong><br>
                     • GitHub Pages: ✅ 正常に動作中<br>
                     • Gist ID: ${this.gistId}<br>
+                    • トークン: ${tokenStatus}<br>
+                    • データ: ${dataStatus}<br>
                     • 最終更新: ${now}<br>
-                    • 状態: トークン設定待機中<br>
-                    <br>
-                    <strong>次のステップ:</strong><br>
-                    Personal Access Tokenの設定後、データの読み込みが可能になります。
+                    ${this.stateData ? `• 前回保存: ${new Date(this.stateData.lastUpdated).toLocaleString('ja-JP')}` : ''}
                 `;
-            }
-            
-            loadData() {
-                this.updateStatus('データを読み込み中...', 'info');
-                // 実装予定: Gistからデータを取得
-                
-                setTimeout(() => {
-                    this.updateStatus('データ読み込み機能は次のステップで実装予定', 'warning');
-                }, 1000);
-            }
-            
-            saveData() {
-                this.updateStatus('データを保存中...', 'info');
-                // 実装予定: Gistにデータを保存
-                
-                setTimeout(() => {
-                    this.updateStatus('データ保存機能は次のステップで実装予定', 'warning');
-                }, 1000);
             }
             
             resetApp() {
                 this.updateStatus('アプリケーションをリセットしています...', 'info');
                 
+                // トークンを削除
+                localStorage.removeItem('github-token');
+                this.token = null;
+                this.graphData = null;
+                this.stateData = null;
+                
+                // UI をリセット
+                document.getElementById('tokenSetup').style.display = 'block';
+                document.getElementById('loadDataBtn').disabled = true;
+                document.getElementById('saveDataBtn').disabled = true;
+                document.getElementById('resetBtn').disabled = true;
+                
+                const container = document.getElementById('graphContainer');
+                container.innerHTML = `
+                    <div class="placeholder">
+                        <h3>グラフ領域</h3>
+                        <p>ここにCytoscape.jsのグラフが表示されます</p>
+                    </div>
+                `;
+                
                 setTimeout(() => {
-                    this.updateStatus('リセット完了', 'success');
+                    this.updateStatus('リセット完了 - トークンを再設定してください', 'warning');
                     this.updateInfo();
                 }, 500);
             }
