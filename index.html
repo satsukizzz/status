@@ -467,9 +467,10 @@
                 // イベントリスナーを設定
                 this.cy.on('tap', 'node', (event) => {
                     const node = event.target;
+                    this.handleNodeClick(node);
                     this.selectNode(node);
                 });
-                
+                // コンテキストメニューの設定（右クリックで状態変更）
                 this.cy.on('cxttap', 'node', (event) => {
                     const node = event.target;
                     this.showStateMenu(node, event);
@@ -678,6 +679,21 @@
                 }
             }
             
+            handleNodeClick(node) {
+                const nodeId = node.id();
+                const currentState = node.data('state');
+                
+                console.log(`ノード ${nodeId} がクリックされました (現在の状態: ${currentState})`);
+                
+                // 状態を循環的に変更
+                const states = ['active', 'inactive', 'pending', 'completed'];
+                const currentIndex = states.indexOf(currentState);
+                const nextState = states[(currentIndex + 1) % states.length];
+                
+                // 状態を更新
+                this.changeNodeState(nodeId, nextState);
+            }
+
             changeNodeState(nodeId, newState) {
                 if (!this.stateData) return;
                 
